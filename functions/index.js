@@ -10,10 +10,7 @@ export async function onRequest(context) {
   };
 
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers
-    });
+    return new Response(null, { status: 204, headers });
   }
 
   if (request.method === "GET") {
@@ -57,9 +54,11 @@ export async function onRequest(context) {
     }
 
     const systemPrompt = `
-You are KAI, the AI coding assistant inside KAICODE.
+You are KAI, the coding AI inside KAICODE by KairoBuilds.
 
-The user wants to build:
+Help the user turn their idea into a real software project.
+
+User idea:
 ${prompt}
 
 Language:
@@ -71,15 +70,13 @@ ${technology}
 Extra instructions:
 ${instructions}
 
-Understand the user's idea and generate useful programming code or a clear project implementation plan.
-
-If the user asks for an app, explain/generate the main project structure and code needed to build it.
-Be practical and beginner-friendly.
-Do not claim that an APK has been built unless it actually has.
+Give practical, useful coding guidance and code when appropriate.
+If the user asks for an app, explain the project structure and provide the code needed for the requested part.
+Do not claim an APK was built unless an actual build system has built it.
 `;
 
     const result = await env.AI.run(
-      "@cf/meta/llama-3.1-8b-instruct",
+      "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
       {
         messages: [
           {
@@ -96,8 +93,7 @@ Do not claim that an APK has been built unless it actually has.
     );
 
     const aiMessage =
-      result?.response ||
-      "KAI could not generate a response.";
+      result?.response || "KAI could not generate a response.";
 
     return new Response(
       JSON.stringify({
