@@ -65,24 +65,8 @@ export async function onRequest(context) {
         );
       }
 
-      /*
-       * GitHub Actions build engine.
-       *
-       * Required Cloudflare environment variables:
-       *
-       * GITHUB_TOKEN
-       * GITHUB_OWNER
-       * GITHUB_REPO
-       * GITHUB_WORKFLOW
-       *
-       * Example:
-       * GITHUB_OWNER = your-github-name
-       * GITHUB_REPO = kaicode-builder
-       * GITHUB_WORKFLOW = build-apk.yml
-       */
-
       if (
-        !env.GITHUB_TOKEN ||
+        !env.KAICODE_TOKEN ||
         !env.GITHUB_OWNER ||
         !env.GITHUB_REPO ||
         !env.GITHUB_WORKFLOW
@@ -105,7 +89,7 @@ export async function onRequest(context) {
       const buildResponse = await fetch(githubUrl, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.GITHUB_TOKEN}`,
+          "Authorization": `Bearer ${env.KAICODE_TOKEN}`,
           "Accept": "application/vnd.github+json",
           "Content-Type": "application/json",
           "X-GitHub-Api-Version": "2022-11-28"
@@ -212,7 +196,6 @@ IMPORTANT OUTPUT RULES:
       result?.response ||
       "KAI could not generate a response.";
 
-    // Try to extract the first markdown code block.
     let generatedCode = "";
 
     const codeMatch = aiMessage.match(
@@ -236,10 +219,8 @@ IMPORTANT OUTPUT RULES:
           technology: technology,
           instructions: instructions,
 
-          // Used by KAICODE's Copy Code button
           code: generatedCode,
 
-          // Used by the Build APK button
           buildable:
             technology.toLowerCase().includes("android") ||
             technology.toLowerCase().includes("kotlin")
