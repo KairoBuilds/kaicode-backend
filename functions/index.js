@@ -49,9 +49,6 @@ export async function onRequest(context) {
     const technology = String(body.technology || "Automatic");
     const instructions = String(body.instructions || "");
 
-    // =========================
-    // BUILD APK REQUEST
-    // =========================
     if (action === "build_apk") {
       const projectCode = String(body.code || "").trim();
 
@@ -75,13 +72,17 @@ export async function onRequest(context) {
           JSON.stringify({
             success: false,
             status: "build_engine_required",
-            error: "APK build engine is not connected yet.",
-            message:
-              "Connect the KAICODE GitHub Actions build engine first."
+            error: "APK build engine is not connected yet."
           }),
           { status: 503, headers }
         );
       }
+
+      const projectCodeBase64 = btoa(
+        unescape(encodeURIComponent(projectCode))
+      );
+
+      const buildId = `KAI-${Date.now()}`;
 
       const githubUrl =
         `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW}/dispatches`;
@@ -97,7 +98,8 @@ export async function onRequest(context) {
         body: JSON.stringify({
           ref: "main",
           inputs: {
-            project_code: projectCode,
+            build_id: buildId,
+            project_code: projectCodeBase64,
             language: language,
             technology: technology
           }
@@ -124,6 +126,7 @@ export async function onRequest(context) {
           app: "KAICODE",
           status: "build_started",
           message: "APK build started successfully.",
+          build_id: buildId,
           project: {
             language: language,
             technology: technology
@@ -132,10 +135,6 @@ export async function onRequest(context) {
         { status: 200, headers }
       );
     }
-
-    // =========================
-    // AI GENERATION
-    // =========================
 
     if (!prompt) {
       return new Response(
@@ -212,15 +211,12 @@ IMPORTANT OUTPUT RULES:
         app: "KAICODE",
         status: "generated",
         message: aiMessage,
-
         project: {
           idea: prompt,
           language: language,
           technology: technology,
           instructions: instructions,
-
           code: generatedCode,
-
           buildable:
             technology.toLowerCase().includes("android") ||
             technology.toLowerCase().includes("kotlin")
