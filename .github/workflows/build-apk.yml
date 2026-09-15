@@ -7,14 +7,17 @@ on:
         description: "KAICODE Build ID"
         required: true
         type: string
+
       project_code:
         description: "Generated Kotlin code"
         required: true
         type: string
+
       language:
         description: "Language"
         required: true
         type: string
+
       technology:
         description: "Technology"
         required: true
@@ -30,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Setup JDK
         uses: actions/setup-java@v6
         with:
@@ -38,12 +42,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: ""
 
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
+          yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Setup Gradle
@@ -108,6 +110,15 @@ jobs:
                   versionCode 1
                   versionName '1.0'
               }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
           }
 
           dependencies {
@@ -140,9 +151,13 @@ jobs:
 
           cat > app/src/main/res/values/styles.xml <<'EOF'
           <resources>
-              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+              <style
+                  name="AppTheme"
+                  parent="android:style/Theme.Material.Light.NoActionBar">
+
                   <item name="android:fontFamily">sans</item>
                   <item name="android:colorAccent">#825AFF</item>
+
               </style>
           </resources>
           EOF
@@ -150,10 +165,12 @@ jobs:
           printf '%s' "$PROJECT_CODE" > app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt
 
       - name: Create Gradle wrapper
-        run: gradle wrapper --gradle-version 8.9
+        run: |
+          gradle wrapper --gradle-version 8.9
 
       - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          ./gradlew assembleDebug --no-daemon
 
       - name: Create GitHub Release
         env:
