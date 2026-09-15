@@ -7,17 +7,14 @@ on:
         description: "KAICODE Build ID"
         required: true
         type: string
-
       project_code:
         description: "Generated Kotlin code"
         required: true
         type: string
-
       language:
         description: "Language"
         required: true
         type: string
-
       technology:
         description: "Technology"
         required: true
@@ -33,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Setup JDK
         uses: actions/setup-java@v6
         with:
@@ -154,10 +150,8 @@ jobs:
               <style
                   name="AppTheme"
                   parent="android:style/Theme.Material.Light.NoActionBar">
-
                   <item name="android:fontFamily">sans</item>
                   <item name="android:colorAccent">#825AFF</item>
-
               </style>
           </resources>
           EOF
