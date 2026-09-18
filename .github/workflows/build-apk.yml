@@ -41,7 +41,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
       # --------------------------------------------------
       # 2. Setup Java
       # --------------------------------------------------
@@ -50,7 +49,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-
 
       # --------------------------------------------------
       # 3. Setup Android SDK
@@ -64,7 +62,6 @@ jobs:
           sdkmanager "platforms;android-35"
           sdkmanager "build-tools;35.0.0"
 
-
       # --------------------------------------------------
       # 4. Setup Gradle
       # --------------------------------------------------
@@ -72,7 +69,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "8.9"
-
 
       # --------------------------------------------------
       # 5. Create Android project
@@ -89,7 +85,6 @@ jobs:
 
           mkdir -p app/src/main/java/com/kairobuilds/generatedapp
           mkdir -p app/src/main/res/values
-
 
           # ------------------------------------------------
           # settings.gradle
@@ -118,7 +113,6 @@ jobs:
           include(":app")
           EOF
 
-
           # ------------------------------------------------
           # Root build.gradle
           # ------------------------------------------------
@@ -130,7 +124,6 @@ jobs:
           }
           EOF
 
-
           # ------------------------------------------------
           # gradle.properties
           # ------------------------------------------------
@@ -141,7 +134,6 @@ jobs:
           kotlin.code.style=official
           org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
           EOF
-
 
           # ------------------------------------------------
           # app/build.gradle
@@ -186,7 +178,6 @@ jobs:
           }
           EOF
 
-
           # ------------------------------------------------
           # AndroidManifest.xml
           # ------------------------------------------------
@@ -223,7 +214,6 @@ jobs:
           </manifest>
           EOF
 
-
           # ------------------------------------------------
           # styles.xml
           # ------------------------------------------------
@@ -248,7 +238,6 @@ jobs:
           </resources>
           EOF
 
-
           # ------------------------------------------------
           # Decode / clean generated Kotlin code
           # ------------------------------------------------
@@ -267,7 +256,6 @@ jobs:
 
           print("Received project code.")
 
-          # Remove Markdown Kotlin code fences
           match = re.search(
               r"```(?:kotlin|kt)?\s*([\s\S]*?)```",
               raw,
@@ -277,10 +265,8 @@ jobs:
           if match:
               raw = match.group(1).strip()
 
-          # Remove possible leading/trailing whitespace
           raw = raw.strip()
 
-          # Check if the input already looks like Kotlin
           kotlin_markers = (
               "package ",
               "import ",
@@ -298,9 +284,7 @@ jobs:
               print("Detected plain Kotlin code.")
 
           else:
-              # Try Base64
               try:
-
                   compact = "".join(raw.split())
 
                   decoded = base64.b64decode(
@@ -311,7 +295,6 @@ jobs:
                   if decoded.startswith(kotlin_markers):
                       code = decoded
                       print("Detected Base64 encoded Kotlin.")
-
                   else:
                       code = raw
                       print("Base64 decoded text was not Kotlin. Using original input.")
@@ -320,29 +303,13 @@ jobs:
                   code = raw
                   print("Input was not valid Base64. Using original input.")
 
-
-          # ------------------------------------------------
-          # Validate Kotlin code
-          # ------------------------------------------------
-
           if not code.strip():
               print("ERROR: Kotlin source is empty.")
               sys.exit(1)
 
-
-          # ------------------------------------------------
-          # Make sure MainActivity exists
-          # ------------------------------------------------
-
           if "class MainActivity" not in code:
-
               print("WARNING: MainActivity was not found.")
               print("The generated code must contain MainActivity.")
-
-
-          # ------------------------------------------------
-          # Save MainActivity.kt
-          # ------------------------------------------------
 
           output_file = (
               "app/src/main/java/"
@@ -355,9 +322,7 @@ jobs:
               "w",
               encoding="utf-8"
           ) as f:
-
               f.write(code)
-
 
           print("")
           print("Kotlin source saved successfully.")
@@ -365,7 +330,6 @@ jobs:
           print("Characters:", len(code))
 
           PY
-
 
       # --------------------------------------------------
       # 6. Show generated Kotlin
@@ -379,11 +343,10 @@ jobs:
 
           test -f app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt
 
-          sed -n '1,120p' \
+          sed -n '1,160p' \
             app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt
 
           echo "======================================"
-
 
       # --------------------------------------------------
       # 7. Create Gradle wrapper
@@ -395,7 +358,6 @@ jobs:
             --gradle-version 8.9 \
             --distribution-type bin
 
-
       # --------------------------------------------------
       # 8. Make Gradle wrapper executable
       # --------------------------------------------------
@@ -405,7 +367,6 @@ jobs:
           chmod +x ./gradlew
 
           ./gradlew --version
-
 
       # --------------------------------------------------
       # 9. Clean project
@@ -417,18 +378,31 @@ jobs:
             --no-daemon \
             --stacktrace
 
-
       # --------------------------------------------------
       # 10. Build Debug APK
       # --------------------------------------------------
       - name: Build APK
         run: |
 
+          set +e
+
           ./gradlew assembleDebug \
             --no-daemon \
             --stacktrace \
-            --info
+            --info 2>&1 | tee build.log
 
+          BUILD_EXIT=${PIPESTATUS[0]}
+
+          echo ""
+          echo "======================================"
+          echo "KAICODE COMPILER ERRORS"
+          echo "======================================"
+
+          grep -E "^(e:|.*error:|.*ERROR:)" build.log || true
+
+          echo "======================================"
+
+          exit $BUILD_EXIT
 
       # --------------------------------------------------
       # 11. Verify APK
@@ -452,7 +426,6 @@ jobs:
 
           echo "======================================"
 
-
       # --------------------------------------------------
       # 12. Upload APK as GitHub Artifact
       # --------------------------------------------------
@@ -462,7 +435,6 @@ jobs:
           name: KAICODE-${{ inputs.build_id }}-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
 
       # --------------------------------------------------
       # 13. Create GitHub Release
