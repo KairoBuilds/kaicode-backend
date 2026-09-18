@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       project_code:
-        description: "Generated Kotlin code (Base64 or plain text)"
+        description: "Generated Kotlin code (Base64 or plain Kotlin)"
         required: true
         type: string
       language:
@@ -154,19 +154,47 @@ jobs:
           EOF
 
           python3 - <<'PY'
-          import base64
           import os
+          import base64
+          import re
 
-          data = os.environ["PROJECT_CODE"]
+          raw = os.environ["PROJECT_CODE"].strip()
 
-          try:
-              decoded = base64.b64decode(data, validate=True).decode("utf-8")
-              if "package " in decoded or "class " in decoded or "import " in decoded:
-                  code = decoded
-              else:
-                  code = data
-          except Exception:
-              code = data
+          if "```" in raw:
+              match = re.search(
+                  r"```(?:kotlin|kt)?\s*([\s\S]*?)```",
+                  raw,
+                  re.IGNORECASE
+              )
+              if match:
+                  raw = match.group(1).strip()
+
+          kotlin_markers = (
+              "package ",
+              "import ",
+              "class ",
+              "object ",
+              "fun ",
+              "@file:",
+              "private class ",
+              "public class "
+          )
+
+          if raw.startswith(kotlin_markers):
+              code = raw
+          else:
+              try:
+                  decoded = base64.b64decode(
+                      raw,
+                      validate=True
+                  ).decode("utf-8").strip()
+
+                  if decoded.startswith(kotlin_markers):
+                      code = decoded
+                  else:
+                      code = raw
+              except Exception:
+                  code = raw
 
           with open(
               "app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt",
@@ -176,13 +204,24 @@ jobs:
               f.write(code)
           PY
 
+      - name: Verify Kotlin source
+        run: |
+          echo "===== MainActivity.kt ====="
+          sed -n '1,80p' app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt
+          echo "=========================="
+
       - name: Create Gradle wrapper
         run: |
           gradle wrapper --gradle-version 8.9
 
       - name: Build APK
         run: |
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew clean assembleDebug --no-daemon
+
+      - name: Verify APK
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
 
       - name: Create GitHub Release
         env:
