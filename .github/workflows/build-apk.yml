@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       project_code:
-        description: "Generated Kotlin code (Base64)"
+        description: "Generated Kotlin code (Base64 or plain text)"
         required: true
         type: string
       language:
@@ -153,7 +153,28 @@ jobs:
           </resources>
           EOF
 
-          printf '%s' "$PROJECT_CODE" | base64 --decode > app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt
+          python3 - <<'PY'
+          import base64
+          import os
+
+          data = os.environ["PROJECT_CODE"]
+
+          try:
+              decoded = base64.b64decode(data, validate=True).decode("utf-8")
+              if "package " in decoded or "class " in decoded or "import " in decoded:
+                  code = decoded
+              else:
+                  code = data
+          except Exception:
+              code = data
+
+          with open(
+              "app/src/main/java/com/kairobuilds/generatedapp/MainActivity.kt",
+              "w",
+              encoding="utf-8"
+          ) as f:
+              f.write(code)
+          PY
 
       - name: Create Gradle wrapper
         run: |
